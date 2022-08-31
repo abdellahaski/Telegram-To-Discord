@@ -17,6 +17,7 @@ appid = os.environ.get("APPID")
 apihash = os.environ.get("APIHASH")
 apiname = os.environ.get("APINAME")
 dlloc = os.environ.get("DLLOC")
+input_channels_entities = os.environ.get("INPUT_CHANNELS_ENTITIES")
 
 async def imgur(mediafile): # Uploads media to imgur
     url = "https://api.imgur.com/3/upload"
@@ -44,6 +45,8 @@ def start():
     
     @client.on(events.NewMessage())
     async def handler(event):
+        if( str(event.chat.id) not in input_channels_entities):
+          return;
         #print(event.chat)
         #print(event.message)
         msg = event.message.message
