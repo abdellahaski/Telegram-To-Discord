@@ -48,13 +48,13 @@ def start():
         #print(event.message)
         msg = event.message.message
         # Try to detect the language and translate the message if it's not english
-        try: 
-          if msg != '':
-              if detect(textwrap.wrap(msg, 2000)[0]) != 'en':
-                  msg += '\n\n'+'Translated:\n\n' + GoogleTranslator(source='auto', target='en').translate(msg)
-         # print(mm)
-        except:
-          pass
+        #try: 
+        #  if msg != '':
+        #      if detect(textwrap.wrap(msg, 2000)[0]) != 'en':
+        #          msg += '\n\n'+'Translated:\n\n' + GoogleTranslator(source='auto', target='en').translate(msg)
+        # # print(mm)
+        #except:
+        #  pass
         # Check if the message is has a media file
         if event.message.media is not None:
             dur = 0
