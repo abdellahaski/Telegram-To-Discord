@@ -39,41 +39,39 @@ def start():
                             appid, 
                             apihash)
     client.start()
-    #input_channels_entities = [-1336211109]
-    #output_channel_entities = []
     print('Started')
     
     @client.on(events.NewMessage())
     async def handler(event):
-        if( str(event.chat.id) not in input_channels_entities):
+        if( str(event.chat.id) not in input_channels_entities):#Checking if the message is comming from one of the specified Telegram channels
           return;
-        #print(event.chat)
-        #print(event.message)
         msg = event.message.message
-        # Try to detect the language and translate the message if it's not english
-        #try: 
-        #  if msg != '':
-        #      if detect(textwrap.wrap(msg, 2000)[0]) != 'en':
-        #          msg += '\n\n'+'Translated:\n\n' + GoogleTranslator(source='auto', target='en').translate(msg)
-        # # print(mm)
-        #except:
-        #  pass
-        # Check if the message is has a media file
+        #Looking for href urls in the text message and appending them to the message
+        try:
+          for entity in event.message.entities:
+            if ('MessageEntityTextUrl' in type(entity).__name__):
+              msg +=f"\n\n{entity.url}" 
+        except:
+          print("no url found, forwording Text message")
+
         if event.message.media is not None:
             dur = 0
-            # Set duration to 1 if media has no duration ex. photo
-            if event.message.file.duration is None:
-              dur=1
-            # Duration less than 60s
-            if dur>60: # Duration greater than 60s send link to media
-              print('Media too long!')
-              msg +=f"\n\nLink to Video: https://t.me/c/{event.chat.id}/{event.message.id}" 
+            if('MessageMediaWebPage' in type(event.message.media).__name__):# directly send message if the media attached is a webpage embed 
               await send_to_webhook(msg,event.chat.title)
-              return
-            else: # Duration less than 60s send media
-              path = await event.message.download_media(dlloc)
-              await pic(path,msg,event.chat.title)
-              os.remove(path)
+            else:
+              # Set duration to 1 if media has no duration ex. photo
+              if event.message.file.duration is None:
+                dur=1
+              # Duration less than 60s
+              if dur>60: # Duration greater than 60s send link to media
+                print('Media too long!')
+                msg +=f"\n\nLink to Video: https://t.me/c/{event.chat.id}/{event.message.id}" 
+                await send_to_webhook(msg,event.chat.title)
+                return
+              else: # Duration less than 60s send media
+                path = await event.message.download_media(dlloc)
+                await pic(path,msg,event.chat.title)
+                os.remove(path)
         else: # No media text message
             await send_to_webhook(msg,event.chat.title)
         
