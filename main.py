@@ -18,8 +18,24 @@ apihash = os.environ.get("APIHASH")
 apiname = os.environ.get("APINAME")
 dlloc = os.environ.get("DLLOC")
 input_channels_entities = os.environ.get("INPUT_CHANNELS_ENTITIES")
+channels_avatars=os.environ.get("CHANNELS_AVATARS")
+channels_avatars=json.loads(channels_avatars)
 
-async def imgur(mediafile): # Uploads media to imgur
+async def imgurimg(mediafile): # Uploads image to imgur
+    url = "https://api.imgur.com/3/upload"
+
+    payload = {
+    'type': 'file'}
+    files = [
+    ('image', open(mediafile, 'rb'))
+    ]
+    headers = {
+    'Authorization': str(random.randint(1,10000000000))
+    }
+    response = requests.request("POST", url, headers=headers, data = payload, files = files)
+    return(json.loads(response.text))
+
+async def imgur(mediafile): # Uploads video to imgur
     url = "https://api.imgur.com/3/upload"
 
     payload = {'album': 'ALBUMID',
@@ -45,6 +61,19 @@ def start():
     async def handler(event):
         if( str(event.chat.id) not in input_channels_entities):#Checking if the message is comming from one of the specified Telegram channels
           return;
+        
+        #checking if the channel avatar is already specified on the .env file
+        if(str(event.chat.id) in channels_avatars):
+          channelAvatarUrl=channels_avatars[str(event.chat.id)]
+        else: # if not we download it and upload it to imgur (since discord accept only avartar urls)
+          channel = await client.get_entity(event.chat.id)
+          channelAvatar = await client.download_profile_photo(channel,dlloc, download_big=False)
+          channelAvatarUrl=await imgurimg(channelAvatar)
+          os.remove(channelAvatar)  
+          channelAvatarUrl = channelAvatarUrl['data']['link']
+          channels_avatars[str(event.chat.id)]=channelAvatarUrl # we store it on the channels avatars array so we can use it another time without reuploading to imgur
+
+
         msg = event.message.message
         #Looking for href urls in the text message and appending them to the message
         try:
@@ -57,7 +86,7 @@ def start():
         if event.message.media is not None:
             dur = 0
             if('MessageMediaWebPage' in type(event.message.media).__name__):# directly send message if the media attached is a webpage embed 
-              await send_to_webhook(msg,event.chat.title)
+              await send_to_webhook(msg,event.chat.title,channelAvatarUrl)
             else:
               # Set duration to 1 if media has no duration ex. photo
               if event.message.file.duration is None:
@@ -66,24 +95,24 @@ def start():
               if dur>60: # Duration greater than 60s send link to media
                 print('Media too long!')
                 msg +=f"\n\nLink to Video: https://t.me/c/{event.chat.id}/{event.message.id}" 
-                await send_to_webhook(msg,event.chat.title)
+                await send_to_webhook(msg,event.chat.title,channelAvatarUrl)
                 return
               else: # Duration less than 60s send media
                 path = await event.message.download_media(dlloc)
-                await pic(path,msg,event.chat.title)
+                await pic(path,msg,event.chat.title,channelAvatarUrl)
                 os.remove(path)
         else: # No media text message
-            await send_to_webhook(msg,event.chat.title)
+            await send_to_webhook(msg,event.chat.title,channelAvatarUrl)
         
     client.run_until_disconnected()
 
-async def pic(filem,message,username): # Send media to webhook
+async def pic(filem,message,username,channelAvatarUrl): # Send media to webhook
     async with aiohttp.ClientSession() as session:
         print('Sending w media')
         webhook = nextcord.Webhook.from_url(url, session=session)
         try: # Try sending to discord
           f = nextcord.File(filem)
-          await webhook.send(file=f,username=username)
+          await webhook.send(file=f,username=username,avatar_url=channelAvatarUrl)
         except: # If it fails upload to imgur
           print('File too big..')
           try:
@@ -91,18 +120,18 @@ async def pic(filem,message,username): # Send media to webhook
             #print(image)
             image = image['data']['link']
             print(f'Imgur: {image}') 
-            await webhook.send(content=image,username=username) # Send imgur link to discord
+            await webhook.send(content=image,username=username,avatar_url=channelAvatarUrl) # Send imgur link to discord
           except Exception as ee:
             print(f'Error {ee.args}') 
         for line in textwrap.wrap(message, 2000, replace_whitespace=False): # Send message to discord
-            await webhook.send(content=line,username=username) 
+            await webhook.send(content=line,username=username,avatar_url=channelAvatarUrl) 
 
-async def send_to_webhook(message,username): # Send message to webhook
+async def send_to_webhook(message,username,channelAvatarUrl): # Send message to webhook
     async with aiohttp.ClientSession() as session:
         print('Sending w/o media')
         webhook = nextcord.Webhook.from_url(url, session=session)
         for line in textwrap.wrap(message, 2000, replace_whitespace=False): # Send message to discord
-            await webhook.send(content=line,username=username)
+            await webhook.send(content=line,username=username,avatar_url=channelAvatarUrl)
 
 if __name__ == "__main__":
     start()
