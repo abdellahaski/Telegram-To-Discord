@@ -20,6 +20,7 @@ dlloc = os.environ.get("DLLOC")
 input_channels_entities = os.environ.get("INPUT_CHANNELS_ENTITIES")
 channels_avatars=os.environ.get("CHANNELS_AVATARS")
 channels_avatars=json.loads(channels_avatars)
+text_to_prepend=os.environ.get("TEXT_TO_PREPEND")
 
 async def imgurimg(mediafile): # Uploads image to imgur
     url = "https://api.imgur.com/3/upload"
@@ -127,6 +128,8 @@ async def pic(filem,message,username,channelAvatarUrl): # Send media to webhook
             await webhook.send(content=line,username=username,avatar_url=channelAvatarUrl) 
 
 async def send_to_webhook(message,username,channelAvatarUrl): # Send message to webhook
+    if(text_to_prepend is not None):
+      message=text_to_prepend+message
     async with aiohttp.ClientSession() as session:
         print('Sending w/o media')
         webhook = nextcord.Webhook.from_url(url, session=session)
