@@ -22,6 +22,9 @@ channels_avatars=os.environ.get("CHANNELS_AVATARS")
 channels_avatars=json.loads(channels_avatars)
 text_to_prepend=os.environ.get("TEXT_TO_PREPEND")
 
+if input_channels_entities is not None:
+  input_channels_entities = list(map(int, input_channels_entities.split(',')))
+  
 async def imgurimg(mediafile): # Uploads image to imgur
     url = "https://api.imgur.com/3/upload"
 
@@ -58,10 +61,10 @@ def start():
     client.start()
     print('Started')
     
-    @client.on(events.NewMessage())
+    @client.on(events.NewMessage(chats=input_channels_entities))
     async def handler(event):
-        if( str(event.chat.id) not in input_channels_entities):#Checking if the message is comming from one of the specified Telegram channels
-          return;
+        #if( str(event.chat.id) not in input_channels_entities):#Checking if the message is comming from one of the specified Telegram channels
+         # return;
         
         #checking if the channel avatar is already specified on the .env file
         if(str(event.chat.id) in channels_avatars):
@@ -82,18 +85,18 @@ def start():
             if ('MessageEntityTextUrl' in type(entity).__name__):
               msg +=f"\n\n{entity.url}" 
         except:
-          print("no url found, forwording Text message")
+          print("no url captured, forwording message")
 
         if event.message.media is not None:
-            dur = 0
+            
             if('MessageMediaWebPage' in type(event.message.media).__name__):# directly send message if the media attached is a webpage embed 
               await send_to_webhook(msg,event.chat.title,channelAvatarUrl)
             else:
-              # Set duration to 1 if media has no duration ex. photo
-              if event.message.file.duration is None:
-                dur=1
-              # Duration less than 60s
-              if dur>60: # Duration greater than 60s send link to media
+              dur = event.message.file.duration # Get duration
+              if dur is None:
+                dur=1 # Set duration to 1 if media has no duration ex. photo
+              # If duration is greater than 60 seconds or file size is greater than 8MB
+              if dur>60 or event.message.file.size > 8388609: # Duration greater than 60s send link to media
                 print('Media too long!')
                 msg +=f"\n\nLink to Video: https://t.me/c/{event.chat.id}/{event.message.id}" 
                 await send_to_webhook(msg,event.chat.title,channelAvatarUrl)
